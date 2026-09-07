@@ -1,0 +1,805 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>I.B.B Poultry Farm — Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --ink:#0E1613;
+    --panel:#17221D;
+    --panel-2:#1E2C25;
+    --line: rgba(237,234,224,0.10);
+    --line-strong: rgba(237,234,224,0.18);
+    --paper:#EDEAE0;
+    --paper-dim:#9CA79E;
+    --paper-mute:#6E7A72;
+    --gold:#C9A96C;
+    --gold-dim: rgba(201,169,108,0.35);
+    --pos:#5FBF8F;
+    --pos-dim: rgba(95,191,143,0.15);
+    --neg:#E0776D;
+    --neg-dim: rgba(224,119,109,0.15);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    padding:32px 20px 64px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  /* header / tape */
+  .tape{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px 24px;
+    margin-bottom:28px;
+    position:relative;
+  }
+  .tape::before{
+    content:'';
+    position:absolute; left:0; right:0; bottom:-9px; height:9px;
+    background:
+      linear-gradient(135deg, var(--ink) 50%, transparent 50%) 0 0/12px 9px repeat-x,
+      linear-gradient(-135deg, var(--ink) 50%, transparent 50%) 0 0/12px 9px repeat-x;
+    background-color: var(--panel);
+  }
+  .tape-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .tape-title{font-family:'Fraunces',serif; font-weight:600; font-size:22px; letter-spacing:0.2px;}
+  .tape-contact{font-size:12px; color:var(--paper-mute); margin-top:4px; font-family:'IBM Plex Mono',monospace;}
+  .tape-kicker{font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:var(--gold); margin-bottom:4px; font-family:'IBM Plex Mono',monospace;}
+  .tape-sub{font-size:12px; color:var(--paper-mute); font-family:'IBM Plex Mono',monospace;}
+  .tape-row{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .tally{border-left:1px solid var(--line-strong); padding-left:14px;}
+  .tally:first-child{border-left:none; padding-left:0;}
+  .tally-label{font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--paper-mute); margin-bottom:6px;}
+  .tally-value{font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:500;}
+  .tally-value.pos{color:var(--pos);}
+  .tally-value.neg{color:var(--neg);}
+  .tally-value.gold{color:var(--gold);}
+
+  /* period tabs */
+  .period-tabs{
+    display:flex; gap:6px; margin-bottom:28px;
+    background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:4px;
+  }
+  .period-tab{
+    flex:1; text-align:center; padding:9px 12px; border-radius:3px; cursor:pointer;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px; color:var(--paper-mute);
+    letter-spacing:0.02em; user-select:none; transition:background .15s, color .15s;
+  }
+  .period-tab.active{background:var(--gold); color:#1B160B;}
+  .period-tab:not(.active):hover{color:var(--paper);}
+
+  .download-row{display:flex; justify-content:flex-end; margin-bottom:28px; margin-top:-16px;}
+  .download-btn{
+    background:none; border:1px solid var(--line-strong); color:var(--paper-dim);
+    font-family:'Inter',sans-serif; font-weight:600; font-size:12px; padding:8px 14px;
+    border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    transition:border-color .15s, color .15s;
+  }
+  .download-btn:hover{border-color:var(--gold-dim); color:var(--gold);}
+  .download-btn svg{display:block;}
+
+  /* section headings */
+  h2{
+    font-family:'Fraunces',serif; font-weight:500; font-size:16px;
+    color:var(--paper); margin:0 0 12px; letter-spacing:0.2px;
+  }
+  .section{margin-bottom:28px;}
+
+  /* form */
+  .entry-form{
+    background:var(--panel); border:1px solid var(--line); border-radius:4px;
+    padding:18px 20px; display:grid; grid-template-columns:1.3fr 1fr 1fr auto; gap:12px; align-items:end;
+  }
+  .field label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-mute); margin-bottom:6px;}
+  .field input{
+    width:100%; background:var(--ink); border:1px solid var(--line-strong); color:var(--paper);
+    font-family:'IBM Plex Mono',monospace; font-size:14px; padding:9px 10px; border-radius:3px;
+  }
+  .field input:focus{outline:none; border-color:var(--gold-dim); box-shadow:0 0 0 2px var(--gold-dim);}
+  .field input::placeholder{color:var(--paper-mute);}
+  .period-select-group{display:flex; gap:6px; flex-wrap:wrap;}
+  .period-select-group select{
+    flex:1 1 80px; min-width:0; background:var(--ink); border:1px solid var(--line-strong); color:var(--paper);
+    font-family:'IBM Plex Mono',monospace; font-size:13px; padding:9px 6px; border-radius:3px;
+    appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%239CA79E'/></svg>");
+    background-repeat:no-repeat; background-position:right 8px center; padding-right:20px;
+  }
+  .period-select-group select:focus{outline:none; border-color:var(--gold-dim); box-shadow:0 0 0 2px var(--gold-dim);}
+  button.add-btn{
+    background:var(--gold); color:#1B160B; border:none; border-radius:3px;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px; padding:10px 18px;
+    cursor:pointer; white-space:nowrap;
+  }
+  button.add-btn:hover{background:#D8BB84;}
+  .form-error{grid-column:1/-1; font-size:12px; color:var(--neg); margin-top:-4px; display:none;}
+
+  /* table */
+  table{width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:4px; overflow:hidden;}
+  thead th{
+    text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-mute);
+    font-weight:500; padding:10px 14px; border-bottom:1px solid var(--line-strong);
+  }
+  thead th:first-child, tbody td:first-child{text-align:left;}
+  tbody td{
+    text-align:right; padding:11px 14px; font-family:'IBM Plex Mono',monospace; font-size:13.5px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--panel-2);}
+  td.month-cell{font-family:'Inter',sans-serif; font-weight:500;}
+  td.margin-cell.pos{color:var(--pos);}
+  td.margin-cell.neg{color:var(--neg);}
+  .del-btn{
+    background:none; border:none; color:var(--paper-mute); cursor:pointer; font-size:13px;
+    font-family:'Inter',sans-serif; padding:2px 6px;
+  }
+  .del-btn:hover{color:var(--neg);}
+  .empty-row td{text-align:center; color:var(--paper-mute); padding:24px; font-family:'Inter',sans-serif; font-style:italic;}
+
+  /* chart */
+  .chart-card{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:20px;}
+  .legend{display:flex; gap:18px; margin-bottom:12px; font-size:12px; color:var(--paper-dim);}
+  .legend span{display:flex; align-items:center; gap:6px;}
+  .swatch{width:10px; height:10px; border-radius:2px; display:inline-block;}
+
+  .footnote{font-size:11px; color:var(--paper-mute); margin-top:10px; text-align:center;}
+
+  @media (max-width:640px){
+    .entry-form{grid-template-columns:1fr 1fr;}
+    .tape-row{grid-template-columns:1fr; gap:10px;}
+    .tally{border-left:none; padding-left:0; border-top:1px solid var(--line-strong); padding-top:10px;}
+    .tally:first-child{border-top:none; padding-top:0;}
+  }
+
+  /* login overlay */
+  #login-overlay{
+    position:fixed; inset:0; background:var(--ink); display:flex; align-items:center; justify-content:center;
+    z-index:1000; padding:20px;
+  }
+  #login-overlay.hidden{display:none;}
+  .login-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:36px 32px; max-width:340px; width:100%; text-align:center;
+  }
+  .login-kicker{font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:var(--gold); margin-bottom:6px; font-family:'IBM Plex Mono',monospace;}
+  .login-title{font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin-bottom:6px;}
+  .login-sub{font-size:13px; color:var(--paper-mute); margin-bottom:24px; font-family:'Inter',sans-serif;}
+  #g_id_signin{display:flex; justify-content:center;}
+  .login-warning{
+    margin-top:18px; font-size:11.5px; color:var(--neg); background:var(--neg-dim);
+    border:1px solid rgba(224,119,109,0.3); border-radius:4px; padding:10px 12px; text-align:left;
+    font-family:'Inter',sans-serif; line-height:1.5;
+  }
+  .login-warning code{font-family:'IBM Plex Mono',monospace; font-size:11px;}
+
+  .account-badge{display:flex; align-items:center; gap:8px;}
+  .account-badge img{width:26px; height:26px; border-radius:50%; border:1px solid var(--line-strong);}
+  .account-badge-info{text-align:right;}
+  .account-name{font-size:12px; font-weight:600; color:var(--paper); font-family:'Inter',sans-serif; line-height:1.3;}
+  .account-email{font-size:10.5px; color:var(--paper-mute); font-family:'IBM Plex Mono',monospace; line-height:1.3;}
+  .signout-btn{
+    background:none; border:1px solid var(--line-strong); color:var(--paper-mute);
+    font-family:'Inter',sans-serif; font-size:11px; padding:6px 10px; border-radius:3px; cursor:pointer;
+    margin-left:4px;
+  }
+  .signout-btn:hover{border-color:var(--neg); color:var(--neg);}
+
+  /* print / PDF report */
+  #print-report{display:none;}
+  @media print{
+    body > *:not(#print-report){display:none !important;}
+    #print-report{display:block !important;}
+    body{background:#fff; padding:0;}
+  }
+  #print-report{
+    font-family:'Inter',sans-serif; color:#1B1F1C; max-width:760px; margin:0 auto; padding:24px;
+  }
+  #print-report h1{font-family:'Fraunces',serif; font-size:22px; margin:0 0 2px;}
+  #print-report .pr-contact{font-size:12px; color:#555; margin-bottom:2px;}
+  #print-report .pr-generated{font-size:11px; color:#777; margin-bottom:18px;}
+  #print-report h3{font-family:'Fraunces',serif; font-size:15px; margin:22px 0 8px; border-bottom:1px solid #ddd; padding-bottom:6px;}
+  #print-report table{width:100%; border-collapse:collapse; font-size:12px; margin-bottom:6px;}
+  #print-report th{
+    text-align:right; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:#555;
+    padding:6px 8px; border-bottom:1px solid #999; font-weight:600;
+  }
+  #print-report th:first-child, #print-report td:first-child{text-align:left;}
+  #print-report td{text-align:right; padding:6px 8px; border-bottom:1px solid #e5e5e5; font-family:'IBM Plex Mono',monospace;}
+  #print-report td.pr-label{font-family:'Inter',sans-serif;}
+  #print-report tr.pr-total td{font-weight:700; border-top:1.5px solid #999; border-bottom:none;}
+  #print-report .pr-empty{color:#888; font-style:italic; font-size:12px; padding:8px 0;}
+</style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-kicker">Ledger</div>
+    <div class="login-title">I.B.B Poultry Farm</div>
+    <div class="login-sub">Sign in with Google to access the ledger.</div>
+    <div id="g_id_signin"></div>
+    <div class="login-warning" id="client-id-warning" style="display:none;">
+      No Google Client ID is set. Open this file, find <code>GOOGLE_CLIENT_ID</code> near the top of the script, and paste in the Client ID from your Google Cloud Console OAuth credentials. This page's exact hosted URL (origin) must also be added there as an authorized JavaScript origin.
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="app-wrap" style="display:none;">
+
+  <div class="tape">
+    <div class="tape-top">
+      <div>
+        <div class="tape-kicker">Ledger</div>
+        <div class="tape-title">I.B.B Poultry Farm</div>
+        <div class="tape-contact">Kaduna, Nigeria &middot; 08029724254</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <div class="tape-sub" id="entry-count">0 months logged</div>
+        <div class="account-badge" id="account-badge"></div>
+      </div>
+    </div>
+    <div class="tape-row">
+      <div class="tally">
+        <div class="tally-label">Total revenue</div>
+        <div class="tally-value" id="stat-revenue">₦0</div>
+      </div>
+      <div class="tally">
+        <div class="tally-label">Total expenses</div>
+        <div class="tally-value" id="stat-expenses">₦0</div>
+      </div>
+      <div class="tally">
+        <div class="tally-label">Net profit &middot; avg margin</div>
+        <div class="tally-value gold" id="stat-profit">₦0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="period-tabs">
+    <div class="period-tab active" data-period="daily">Daily</div>
+    <div class="period-tab" data-period="monthly">Monthly</div>
+  </div>
+
+  <div class="download-row">
+    <div style="text-align:right;">
+      <button class="download-btn" id="download-btn">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M2 10.5h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download all entries (PDF)
+      </button>
+      <div style="font-size:11px; color:var(--paper-mute); margin-top:6px; font-family:'Inter',sans-serif;">Opens your browser's print dialog — choose "Save as PDF" as the destination</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 id="log-heading">Log a month</h2>
+    <div class="entry-form">
+      <div class="field">
+        <label for="in-period" id="in-period-label">Month</label>
+        <input type="text" id="in-period" placeholder="Jan 2026" style="display:none;">
+        <div class="period-select-group" id="monthly-select-group">
+          <select id="sel-monthly-month" aria-label="Month">
+            <option value="">Month</option>
+            <option>January</option>
+            <option>February</option>
+            <option>March</option>
+            <option>April</option>
+            <option>May</option>
+            <option>June</option>
+            <option>July</option>
+            <option>August</option>
+            <option>September</option>
+            <option>October</option>
+            <option>November</option>
+            <option>December</option>
+          </select>
+        </div>
+        <div class="period-select-group" id="period-select-group" style="display:none;">
+          <select id="sel-day" aria-label="Day of week">
+            <option value="">Day</option>
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+            <option>Saturday</option>
+            <option>Sunday</option>
+          </select>
+          <select id="sel-week" aria-label="Week of month">
+            <option value="">Week</option>
+            <option>Week 1</option>
+            <option>Week 2</option>
+            <option>Week 3</option>
+            <option>Week 4</option>
+          </select>
+          <select id="sel-month" aria-label="Month">
+            <option value="">Month</option>
+            <option>January</option>
+            <option>February</option>
+            <option>March</option>
+            <option>April</option>
+            <option>May</option>
+            <option>June</option>
+            <option>July</option>
+            <option>August</option>
+            <option>September</option>
+            <option>October</option>
+            <option>November</option>
+            <option>December</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="in-revenue">Revenue</label>
+        <input type="number" id="in-revenue" placeholder="0" step="0.01">
+      </div>
+      <div class="field">
+        <label for="in-expenses">Expenses</label>
+        <input type="number" id="in-expenses" placeholder="0" step="0.01">
+      </div>
+      <button class="add-btn" id="add-btn">Add entry</button>
+      <div class="form-error" id="form-error"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 id="table-heading">Monthly entries</h2>
+    <table>
+      <thead>
+        <tr><th id="th-period">Month</th><th>Revenue</th><th>Expenses</th><th>Profit</th><th>Margin</th><th></th></tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Trend</h2>
+    <div class="chart-card">
+      <div class="legend">
+        <span><i class="swatch" style="background:#7FA6C9"></i>Revenue</span>
+        <span><i class="swatch" style="background:#C98F6C"></i>Expenses</span>
+        <span><i class="swatch" style="background:#C9A96C"></i>Margin %</span>
+      </div>
+      <div style="position:relative; width:100%; height:280px;">
+        <canvas id="trend-chart" role="img" aria-label="Chart of revenue, expenses, and profit margin"></canvas>
+      </div>
+    </div>
+    <div class="footnote">Data is saved automatically in this browser, private to your Google account.</div>
+  </div>
+
+</div>
+
+<div id="print-report"></div>
+
+<script>
+const periods = {
+  monthly: {
+    key: 'kpi-entries-monthly',
+    entries: [],
+    singular: 'month',
+    plural: 'months',
+    placeholder: 'Jan 2026',
+    fieldLabel: 'Month',
+    logHeading: 'Log a month',
+    tableHeading: 'Monthly entries',
+    formErrorHint: 'a month'
+  },
+  daily: {
+    key: 'kpi-entries-daily',
+    entries: [],
+    singular: 'day',
+    plural: 'days',
+    placeholder: '19 Aug 2026',
+    fieldLabel: 'Date',
+    logHeading: 'Log a day',
+    tableHeading: 'Daily entries',
+    formErrorHint: 'a day, week, and month'
+  }
+};
+let activePeriod = 'daily';
+let chart = null;
+let currentUser = null;
+
+// ---- Google Sign-In config ----
+// 1. Go to https://console.cloud.google.com/apis/credentials
+// 2. Create an OAuth 2.0 Client ID (Application type: Web application)
+// 3. Add the exact URL where you host this file as an "Authorized JavaScript origin"
+// 4. Paste the Client ID below.
+const GOOGLE_CLIENT_ID = '898900149606-oh4eqo5ka8v84ag0j6pcbvim06bb75gc.apps.googleusercontent.com.apps.googleusercontent.com';
+
+function current(){ return periods[activePeriod]; }
+
+function fmt(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '₦' + Math.abs(Math.round(n)).toLocaleString();
+}
+function pct(n){
+  return (Math.round(n*10)/10).toFixed(1) + '%';
+}
+
+function userStorageKey(key){
+  return 'ibb-ledger:' + currentUser.email + ':' + key;
+}
+
+async function loadEntries(key){
+  try{
+    const raw = localStorage.getItem(userStorageKey(key));
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveEntries(){
+  const p = current();
+  try{
+    localStorage.setItem(userStorageKey(p.key), JSON.stringify(p.entries));
+  }catch(e){
+    console.error('Could not save entries', e);
+  }
+}
+
+// ---- Auth ----
+function decodeJwt(token){
+  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  const json = decodeURIComponent(atob(base64).split('').map(c=>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+  ).join(''));
+  return JSON.parse(json);
+}
+
+function renderAccountBadge(){
+  const badge = document.getElementById('account-badge');
+  badge.innerHTML =
+    '<img src="' + currentUser.picture + '" alt="">' +
+    '<div class="account-badge-info">' +
+      '<div class="account-name">' + escapeHtml(currentUser.name) + '</div>' +
+      '<div class="account-email">' + escapeHtml(currentUser.email) + '</div>' +
+    '</div>' +
+    '<button class="signout-btn" id="signout-btn">Sign out</button>';
+  document.getElementById('signout-btn').addEventListener('click', signOut);
+}
+
+async function showApp(){
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('app-wrap').style.display = 'block';
+  renderAccountBadge();
+  await init();
+}
+
+function signOut(){
+  currentUser = null;
+  localStorage.removeItem('ibb-auth-session');
+  if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.disableAutoSelect();
+  }
+  document.getElementById('app-wrap').style.display = 'none';
+  document.getElementById('login-overlay').classList.remove('hidden');
+}
+
+function handleCredentialResponse(response){
+  const payload = decodeJwt(response.credential);
+  currentUser = { email: payload.email, name: payload.name, picture: payload.picture };
+  localStorage.setItem('ibb-auth-session', JSON.stringify(currentUser));
+  showApp();
+}
+
+function initAuth(){
+  if(!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') === 0){
+    document.getElementById('client-id-warning').style.display = 'block';
+    return;
+  }
+  const saved = localStorage.getItem('ibb-auth-session');
+  if(saved){
+    try{
+      currentUser = JSON.parse(saved);
+      showApp();
+      return;
+    }catch(e){ /* fall through to sign-in screen */ }
+  }
+  if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('g_id_signin'),
+      { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }
+    );
+  }
+}
+
+window.addEventListener('load', initAuth);
+
+function sortEntries(){
+  current().entries.sort((a,b)=> a.order - b.order);
+}
+
+function applyPeriodChrome(){
+  const p = current();
+  document.getElementById('log-heading').textContent = p.logHeading;
+  document.getElementById('table-heading').textContent = p.tableHeading;
+  document.getElementById('in-period-label').textContent = p.fieldLabel;
+  document.getElementById('th-period').textContent = p.fieldLabel;
+  document.querySelectorAll('.period-tab').forEach(tab=>{
+    tab.classList.toggle('active', tab.getAttribute('data-period') === activePeriod);
+  });
+  document.getElementById('form-error').style.display = 'none';
+
+  const textInput = document.getElementById('in-period');
+  const dailyGroup = document.getElementById('period-select-group');
+  const monthlyGroup = document.getElementById('monthly-select-group');
+  textInput.style.display = 'none';
+  if(activePeriod === 'daily'){
+    dailyGroup.style.display = 'flex';
+    monthlyGroup.style.display = 'none';
+  }else{
+    dailyGroup.style.display = 'none';
+    monthlyGroup.style.display = 'flex';
+  }
+}
+
+function render(){
+  const p = current();
+  sortEntries();
+  applyPeriodChrome();
+
+  const body = document.getElementById('table-body');
+  body.innerHTML = '';
+
+  if(p.entries.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="6">No entries yet — add your first ' + p.singular + ' above.</td></tr>';
+  }
+
+  let totalRev = 0, totalExp = 0, marginSum = 0;
+
+  p.entries.forEach((e, idx) => {
+    const profit = e.revenue - e.expenses;
+    const margin = e.revenue !== 0 ? (profit / e.revenue) * 100 : 0;
+    totalRev += e.revenue;
+    totalExp += e.expenses;
+    marginSum += margin;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="month-cell">' + escapeHtml(e.label) + '</td>' +
+      '<td>' + fmt(e.revenue) + '</td>' +
+      '<td>' + fmt(e.expenses) + '</td>' +
+      '<td class="' + (profit>=0?'margin-cell pos':'margin-cell neg') + '">' + fmt(profit) + '</td>' +
+      '<td class="' + (margin>=0?'margin-cell pos':'margin-cell neg') + '">' + pct(margin) + '</td>' +
+      '<td><button class="del-btn" data-idx="' + idx + '" aria-label="Delete entry">&times;</button></td>';
+    body.appendChild(tr);
+  });
+
+  document.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async (ev)=>{
+      const i = parseInt(ev.currentTarget.getAttribute('data-idx'));
+      p.entries.splice(i,1);
+      await saveEntries();
+      render();
+    });
+  });
+
+  const netProfit = totalRev - totalExp;
+  const avgMargin = p.entries.length ? marginSum/p.entries.length : 0;
+
+  document.getElementById('entry-count').textContent = p.entries.length + ' ' + (p.entries.length===1 ? p.singular : p.plural) + ' logged';
+  document.getElementById('stat-revenue').textContent = fmt(totalRev);
+  document.getElementById('stat-expenses').textContent = fmt(totalExp);
+  const profitEl = document.getElementById('stat-profit');
+  profitEl.textContent = fmt(netProfit) + '  ·  ' + pct(avgMargin);
+  profitEl.className = 'tally-value ' + (netProfit>=0?'pos':'neg');
+
+  renderChart();
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderChart(){
+  const p = current();
+  const ctx = document.getElementById('trend-chart');
+  const labels = p.entries.map(e=>e.label);
+  const revenue = p.entries.map(e=>e.revenue);
+  const expenses = p.entries.map(e=>e.expenses);
+  const margin = p.entries.map(e=> e.revenue !== 0 ? ((e.revenue-e.expenses)/e.revenue)*100 : 0);
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type:'bar', label:'Revenue', data: revenue,
+          backgroundColor:'#7FA6C9', borderRadius:3, order:2, yAxisID:'y'
+        },
+        {
+          type:'bar', label:'Expenses', data: expenses,
+          backgroundColor:'#C98F6C', borderRadius:3, order:2, yAxisID:'y'
+        },
+        {
+          type:'line', label:'Margin %', data: margin,
+          borderColor:'#C9A96C', backgroundColor:'#C9A96C',
+          borderWidth:2, pointRadius:3, pointBackgroundColor:'#C9A96C',
+          tension:0.25, order:1, yAxisID:'y1'
+        }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: function(item){
+              if(item.dataset.label === 'Margin %') return item.dataset.label + ': ' + item.formattedValue + '%';
+              return item.dataset.label + ': ₦' + Number(item.raw).toLocaleString();
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ ticks:{ color:'#9CA79E' }, grid:{ display:false } },
+        y:{ position:'left', ticks:{ color:'#9CA79E', callback:v=>'₦'+v.toLocaleString() }, grid:{ color:'rgba(237,234,224,0.08)' } },
+        y1:{ position:'right', ticks:{ color:'#9CA79E', callback:v=>v+'%' }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+document.getElementById('add-btn').addEventListener('click', async ()=>{
+  const p = current();
+  const revEl = document.getElementById('in-revenue');
+  const expEl = document.getElementById('in-expenses');
+  const errEl = document.getElementById('form-error');
+
+  let label = '';
+  if(activePeriod === 'daily'){
+    const dayEl = document.getElementById('sel-day');
+    const weekEl = document.getElementById('sel-week');
+    const monthEl = document.getElementById('sel-month');
+    if(dayEl.value && weekEl.value && monthEl.value){
+      label = dayEl.value + ', ' + weekEl.value + ', ' + monthEl.value;
+    }
+  }else{
+    label = document.getElementById('sel-monthly-month').value;
+  }
+
+  const revenue = parseFloat(revEl.value);
+  const expenses = parseFloat(expEl.value);
+
+  if(!label || isNaN(revenue) || isNaN(expenses)){
+    errEl.textContent = 'Enter ' + p.formErrorHint + ', revenue, and expenses first.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  p.entries.push({label, revenue, expenses, order: p.entries.length});
+  await saveEntries();
+
+  if(activePeriod === 'daily'){
+    document.getElementById('sel-day').value = '';
+    document.getElementById('sel-week').value = '';
+    document.getElementById('sel-month').value = '';
+  }else{
+    document.getElementById('sel-monthly-month').value = '';
+  }
+  revEl.value=''; expEl.value='';
+  render();
+});
+
+[document.getElementById('in-revenue'), document.getElementById('in-expenses')].forEach(el=>{
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('add-btn').click(); });
+});
+
+document.querySelectorAll('.period-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    const target = tab.getAttribute('data-period');
+    if(target === activePeriod) return;
+    activePeriod = target;
+    render();
+  });
+});
+
+function buildReportRows(){
+  let body = '';
+
+  ['daily','monthly'].forEach(key=>{
+    const p = periods[key];
+    const sorted = [...p.entries].sort((a,b)=> a.order - b.order);
+
+    body += '<h3>' + p.tableHeading + ' (' + sorted.length + ' ' + (sorted.length===1 ? p.singular : p.plural) + ')</h3>';
+
+    if(!sorted.length){
+      body += '<div class="pr-empty">No ' + p.plural + ' logged yet.</div>';
+      return;
+    }
+
+    body += '<table><thead><tr><th>' + p.fieldLabel + '</th><th>Revenue</th><th>Expenses</th><th>Profit</th><th>Margin</th></tr></thead><tbody>';
+
+    let totalRev = 0, totalExp = 0, marginSum = 0;
+    sorted.forEach(e=>{
+      const profit = e.revenue - e.expenses;
+      const margin = e.revenue !== 0 ? (profit / e.revenue) * 100 : 0;
+      totalRev += e.revenue;
+      totalExp += e.expenses;
+      marginSum += margin;
+      body += '<tr><td class="pr-label">' + escapeHtml(e.label) + '</td><td>' + fmt(e.revenue) + '</td><td>' + fmt(e.expenses) + '</td><td>' + fmt(profit) + '</td><td>' + pct(margin) + '</td></tr>';
+    });
+
+    const netProfit = totalRev - totalExp;
+    const avgMargin = marginSum / sorted.length;
+    body += '<tr class="pr-total"><td class="pr-label">Total</td><td>' + fmt(totalRev) + '</td><td>' + fmt(totalExp) + '</td><td>' + fmt(netProfit) + '</td><td>' + pct(avgMargin) + '</td></tr>';
+    body += '</tbody></table>';
+  });
+
+  return body;
+}
+
+function buildReportDocument(){
+  const rowsHtml = buildReportRows();
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>I.B.B Poultry Farm — Ledger export</title>' +
+    '<style>' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#1B1F1C;max-width:760px;margin:32px auto;padding:0 20px;}' +
+    'h1{font-size:22px;margin:0 0 2px;}' +
+    '.pr-contact{font-size:12px;color:#555;margin-bottom:2px;}' +
+    '.pr-generated{font-size:11px;color:#777;margin-bottom:18px;}' +
+    'h3{font-size:15px;margin:22px 0 8px;border-bottom:1px solid #ddd;padding-bottom:6px;}' +
+    'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}' +
+    'th{text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:#555;padding:6px 8px;border-bottom:1px solid #999;font-weight:600;}' +
+    'th:first-child,td:first-child{text-align:left;}' +
+    'td{text-align:right;padding:6px 8px;border-bottom:1px solid #e5e5e5;font-family:"Courier New",monospace;}' +
+    '.pr-label{font-family:Arial,Helvetica,sans-serif;}' +
+    'tr.pr-total td{font-weight:700;border-top:1.5px solid #999;border-bottom:none;}' +
+    '.pr-empty{color:#888;font-style:italic;font-size:12px;padding:8px 0;}' +
+    '.pr-toolbar{max-width:760px;margin:16px auto 0;padding:0 20px;text-align:right;}' +
+    '.pr-print-btn{background:#C9A96C;color:#1B160B;border:none;border-radius:4px;font-weight:700;font-size:13px;padding:10px 18px;cursor:pointer;}' +
+    '@media print{.pr-toolbar{display:none;}}' +
+    '</style></head><body>' +
+    '<div class="pr-toolbar"><button class="pr-print-btn" onclick="window.print()">Print / Save as PDF</button></div>' +
+    '<h1>I.B.B Poultry Farm</h1>' +
+    '<div class="pr-contact">Kaduna, Nigeria &middot; 08029724254</div>' +
+    '<div class="pr-generated">Ledger export &middot; generated ' + new Date().toLocaleString() + '</div>' +
+    rowsHtml +
+    '</body></html>';
+}
+
+document.getElementById('download-btn').addEventListener('click', ()=>{
+  const html = buildReportDocument();
+  const win = window.open('', '_blank');
+  if(win){
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }else{
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.location.href = url;
+  }
+});
+
+async function init(){
+  periods.monthly.entries = await loadEntries(periods.monthly.key);
+  periods.daily.entries = await loadEntries(periods.daily.key);
+  render();
+}
+// init() is called from showApp() once the user is signed in.
+</script>
+</body>
+</html>
